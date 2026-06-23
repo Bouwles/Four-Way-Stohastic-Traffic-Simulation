@@ -1,3 +1,5 @@
+**Live site:** https://bouwles.github.io/Four-Way-Stohastic-Traffic-Simulation/
+
 # Four-Way Stochastic Traffic Simulation
 
 A web-based simulation built for my IBDP Mathematics AI Higher Level Internal Assessment. It models traffic at a four-way intersection and compares a standard equal-time traffic light system against an optimised one that adapts based on queue lengths and arrival rates.
