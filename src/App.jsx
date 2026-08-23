@@ -98,6 +98,18 @@ export default function App() {
     document.body.style.userSelect = 'none';
   }, [canvasHeight]);
 
+  const onResizeHandleKeyDown = useCallback((e) => {
+    const step = e.shiftKey ? 40 : 10;
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setCanvasHeight(h => Math.max(160, h - step));
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setCanvasHeight(h => Math.min(window.innerHeight * 0.8, h + step));
+    }
+  }, []);
+
   // ── Replay of the Optimized System queue history ────────────────────────
   const replayRef = useRef(null);
   const frameRef = useRef(0);
@@ -266,7 +278,9 @@ export default function App() {
             />
           </div>
 
-          <div className="resize-handle" onMouseDown={onResizeHandleDown}>
+          <div className="resize-handle" role="separator" tabIndex={0}
+            aria-label="Resize 3D replay panel" aria-orientation="horizontal"
+            onMouseDown={onResizeHandleDown} onKeyDown={onResizeHandleKeyDown}>
             <div className="resize-grip" />
           </div>
 
