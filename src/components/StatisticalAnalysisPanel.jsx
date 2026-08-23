@@ -91,6 +91,7 @@ export default function StatisticalAnalysisPanel({
           </p>
           <div className="table-scroll">
             <table className="ia-table">
+              <caption className="sr-only">Calibration ratios and objective score for each tested k value</caption>
               <thead>
                 <tr>
                   <th>k (s)</th><th>mean W<sub>O</sub>/W<sub>E</sub></th>
