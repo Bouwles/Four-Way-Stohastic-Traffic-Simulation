@@ -22,6 +22,7 @@ export function ChartCard({ title, caption, children, filename }) {
           <button
             type="button"
             className="btn btn-export-sm"
+            aria-label={`Download ${title} as a PNG image`}
             onClick={() => downloadChartPng(ref.current, filename).catch(e => alert(e.message))}
           >
             PNG
