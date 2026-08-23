@@ -17,6 +17,7 @@ hard-coded, including the selected value of *k*.
 ## Contents
 
 - [The two systems](#the-two-systems)
+- [Result snapshot](#result-snapshot)
 - [Simulation photos and GIF](#simulation-photos-and-gif)
 - [Fixed model parameters](#fixed-model-parameters)
 - [Poisson arrivals](#poisson-arrivals)
@@ -50,6 +51,22 @@ hard-coded, including the selected value of *k*.
 
 Both systems use the same cycle structure, the same service rate and the same green budget. The only
 difference is how that budget is divided between the four approaches.
+
+## Result snapshot
+
+The adaptive policy is most useful when demand is uneven. In the full deterministic evaluation, every
+scenario uses 250 paired trials: each policy faces the exact same generated arrival times, so the
+difference measures the signal rule rather than random traffic luck.
+
+| Demand pattern | Load | Equal-time mean wait | Optimized mean wait | Mean reduction |
+| --- | ---: | ---: | ---: | ---: |
+| Balanced | 0.55 | 46.9 s | 47.1 s | -0.32% |
+| Balanced | 0.90 | 90.5 s | 78.3 s | 12.58% |
+| Moderate asymmetry | 0.75 | 230.0 s | 53.4 s | 75.96% |
+| High asymmetry | 0.90 | 1104.6 s | 155.7 s | 86.04% |
+
+The balanced low-load case is intentionally included because it is the sanity check: when there is no
+meaningful imbalance to exploit, the adaptive policy should not magically win.
 
 ## Simulation photos and GIF
 
