@@ -27,7 +27,7 @@ export default function ControlPanel({ live, setLive, onRun, onReset, running, b
         <div className="cp-section-label">Scenario (traffic pattern × load ρ)</div>
         <div className="preset-grid">
           {PATTERN_NAMES.map(pattern => LOADS.map(rho => (
-            <button key={`${pattern}-${rho}`} className="preset-btn"
+            <button key={`${pattern}-${rho}`} type="button" className="preset-btn"
               title={`${PATTERN_LABELS[pattern]}, ρ = ${rho}`}
               onClick={() => applyScenario(pattern, rho)}>
               {pattern.slice(0, 3)} {rho.toFixed(2)}
@@ -80,7 +80,7 @@ export default function ControlPanel({ live, setLive, onRun, onReset, running, b
       </div>
 
       <div className="cp-info-section">
-        <button className="cp-info-toggle" onClick={() => setShowInfo(v => !v)} aria-expanded={showInfo}>
+        <button type="button" className="cp-info-toggle" onClick={() => setShowInfo(v => !v)} aria-expanded={showInfo}>
           <span>About this simulation</span>
           <span style={{ fontSize: 10, opacity: 0.5, marginLeft: 'auto' }}>{showInfo ? '▲' : '▼'}</span>
         </button>
@@ -116,10 +116,10 @@ export default function ControlPanel({ live, setLive, onRun, onReset, running, b
       </div>
 
       <div className="cp-actions">
-        <button className="btn btn-run" onClick={onRun} disabled={running || busy}>
+        <button type="button" className="btn btn-run" onClick={onRun} disabled={running || busy}>
           {running ? 'Running…' : 'Run Simulation'}
         </button>
-        <button className="btn btn-reset" onClick={onReset} disabled={running}>Reset</button>
+        <button type="button" className="btn btn-reset" onClick={onReset} disabled={running}>Reset</button>
       </div>
     </div>
   );
