@@ -372,6 +372,7 @@ Other commands:
 npm run build      # production build into dist/
 npm run preview    # serve the production build locally
 npm run lint       # eslint
+npm run capture:media # refresh README screenshots and GIF from the local dev server
 ```
 
 The heavy analyses (250-trial evaluations, calibration) run inside a **Web Worker**, so the interface
