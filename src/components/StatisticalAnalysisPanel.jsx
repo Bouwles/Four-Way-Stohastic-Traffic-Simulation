@@ -133,6 +133,7 @@ export default function StatisticalAnalysisPanel({
           </div>
           <div className="table-scroll">
             <table className="ia-table">
+              <caption className="sr-only">Paired evaluation summary for each traffic scenario</caption>
               <thead>
                 <tr>
                   <th>Scenario</th><th>ρ</th><th>A</th>
