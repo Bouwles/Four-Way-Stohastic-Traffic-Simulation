@@ -269,9 +269,10 @@ export default function App() {
             <div className="resize-grip" />
           </div>
 
-          <div className="tabs">
+          <div className="tabs" role="tablist" aria-label="Simulation views">
             {TABS.map(t => (
-              <button key={t} className={`tab-btn ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
+              <button key={t} type="button" role="tab" aria-selected={tab === t}
+                className={`tab-btn ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
                 {t}
               </button>
             ))}
