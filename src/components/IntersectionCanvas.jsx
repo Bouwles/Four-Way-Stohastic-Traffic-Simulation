@@ -1,4 +1,4 @@
-import { Suspense, useRef, useEffect, useMemo, useState } from 'react';
+import { Suspense, useRef, useEffect, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
@@ -60,11 +60,6 @@ const DIR = {
     depVec: [1, 0, 0],
   },
 };
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
-function rndColor(seed) {
-  return CAR_COLORS[(seed * 2654435761) % CAR_COLORS.length | 0];
-}
 
 // ── Ground ─────────────────────────────────────────────────────────────────────
 function Ground() {
@@ -489,22 +484,6 @@ function SunLight() {
   );
 }
 
-// ── Direction labels ───────────────────────────────────────────────────────────
-function FloatLabel({ position, text, color }) {
-  const ref = useRef();
-  useFrame(({ camera }) => {
-    if (ref.current) ref.current.quaternion.copy(camera.quaternion);
-  });
-  return (
-    <group position={position} ref={ref}>
-      <mesh>
-        <planeGeometry args={[0.8, 0.35]} />
-        <meshBasicMaterial color="#00000088" transparent opacity={0.7} />
-      </mesh>
-    </group>
-  );
-}
-
 // ── Main scene ────────────────────────────────────────────────────────────────
 function Scene({ activeDir, lightStates, queueLengths, speed }) {
   const activeDirRef = useRef(activeDir);
@@ -599,7 +578,7 @@ function StatsOverlay({ queueLengths, activeDir, greenCountdown, cycleNum, light
 }
 
 // ── Export ────────────────────────────────────────────────────────────────────
-export default function IntersectionCanvas({ simState, activeDir, lightStates, queueLengths, greenCountdown, cycleNum, speed }) {
+export default function IntersectionCanvas({ activeDir, lightStates, queueLengths, greenCountdown, cycleNum, speed }) {
   return (
     <div style={{ position:'relative', width:'100%', height:'100%', background:'#000' }}>
       <div style={{ height: '100%' }}>

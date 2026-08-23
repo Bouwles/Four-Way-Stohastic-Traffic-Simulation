@@ -3,54 +3,77 @@ import IntersectionCanvas from './components/IntersectionCanvas.jsx';
 import ControlPanel from './components/ControlPanel.jsx';
 import ResultsDashboard from './components/ResultsDashboard.jsx';
 import GraphPanel from './components/GraphPanel.jsx';
-import DataTables from './components/DataTables.jsx';
-import { simulateEqualTimeSystem, simulateOptimisedSystem } from './simulation/trafficLightSystems.js';
-import { runMonteCarlo } from './simulation/monteCarlo.js';
+import MathAnalysisPanel from './components/MathAnalysisPanel.jsx';
+import StatisticalAnalysisPanel from './components/StatisticalAnalysisPanel.jsx';
+import {
+  CalibrationChart, ImprovementChart, ReductionHeatmap,
+  RepresentativeQueueChart, DifferenceHistogram,
+} from './components/AnalysisGraphs.jsx';
+import { useAnalysisWorker } from './hooks/useAnalysisWorker.js';
+import { runPairedTrial } from './model/evaluation.js';
+import {
+  DIRS, SCENARIOS, DEFAULT_K, EVALUATION_TRIALS, REPRESENTATIVE, lambdasFor,
+} from './model/constants.js';
 import './App.css';
 
-const DEFAULT_PARAMS = {
-  duration: 600, dt: 0.5, speed: 4, seed: 42,
-  lambdas: { N: 0.1, S: 0.1, E: 0.1, W: 0.1 },
-  cycleLength: 120, yellowDuration: 3, allRedDuration: 2,
-  minGreen: 10, maxGreen: 80, mu: 0.5,
-  optimisationMethod: 'adaptive',
-  alpha: 1.0, beta: 0.3, gamma: 0.5, gridStep: 5, mcTrials: 20,
+const TABS = ['Live Run', 'Statistical Analysis', 'Graphs', 'Method'];
+const DEFAULT_CANVAS_H = 400;
+const DIR_COLORS = { N: '#00e5ff', S: '#ff4081', E: '#76ff03', W: '#ffab40' };
+
+/** λ as a { N, S, E, W } object so the sliders can address each road by name. */
+function lambdaObject(pattern, rho) {
+  const arr = lambdasFor(pattern, rho);
+  return Object.fromEntries(DIRS.map((d, i) => [d, arr[i]]));
+}
+
+const DEFAULT_LIVE = {
+  lambdas: lambdaObject('High', 0.9),
+  seed: 42,
+  k: DEFAULT_K,
+  speed: 8,
 };
 
-const TABS = ['Results', 'Graphs', 'Data Tables'];
-const DEFAULT_CANVAS_H = 400;
+const DEFAULT_ANALYSIS = {
+  trials: EVALUATION_TRIALS,
+  k: DEFAULT_K,
+  scenarioIndex: 8,
+  seedBase: SCENARIOS[8].seedBase,
+};
 
 export default function App() {
-  const [params, setParams]       = useState(DEFAULT_PARAMS);
-  const [tab, setTab]             = useState('Results');
-  const [running, setRunning]     = useState(false);
-  const [mcRunning, setMcRunning] = useState(false);
+  const [live, setLive] = useState(DEFAULT_LIVE);
+  const [tab, setTab] = useState('Live Run');
+  const [running, setRunning] = useState(false);
+  const [liveError, setLiveError] = useState(null);
 
-  const [equalResult, setEqualResult]         = useState(null);
-  const [optResult, setOptResult]             = useState(null);
-  const [equalTimeSeries, setEqualTimeSeries] = useState(null);
-  const [optTimeSeries, setOptTimeSeries]     = useState(null);
-  const [mcResults, setMcResults]             = useState(null);
+  const [liveResult, setLiveResult] = useState(null);
 
-  const [visState, setVisState]             = useState(null);
-  const [activeDir, setActiveDir]           = useState(null);
-  const [lightStates, setLightStates]       = useState({ N:'red', S:'red', E:'red', W:'red' });
-  const [queueLengths, setQueueLengths]     = useState({ N:0, S:0, E:0, W:0 });
-  const [greenCountdown, setGreenCountdown] = useState(0);
-  const [cycleNum, setCycleNum]             = useState(0);
+  // ── Statistical analysis state ──────────────────────────────────────────
+  const [analysisConfig, setAnalysisConfig] = useState(DEFAULT_ANALYSIS);
+  const [calibration, setCalibration] = useState(null);
+  const [scenarios, setScenarios] = useState(null);
+  const [sensitivity, setSensitivity] = useState(null);
+  const [representative, setRepresentative] = useState(null);
+  const { run, cancel, busy, progress, error: workerError } = useAnalysisWorker();
 
-  // ── Drag-resize state ──────────────────────────────────────────────────────
+  // ── Animation state ─────────────────────────────────────────────────────
+  const [visState, setVisState] = useState(null);
+  const [activeDir, setActiveDir] = useState(null);
+  const [lightStates, setLightStates] = useState({ N: 'red', S: 'red', E: 'red', W: 'red' });
+  const [queueLengths, setQueueLengths] = useState({ N: 0, S: 0, E: 0, W: 0 });
+  const [cycleNum, setCycleNum] = useState(0);
+
+  // ── Drag-resize of the 3D canvas ────────────────────────────────────────
   const [canvasHeight, setCanvasHeight] = useState(DEFAULT_CANVAS_H);
-  const dragging    = useRef(false);
-  const dragStartY  = useRef(0);
-  const dragStartH  = useRef(DEFAULT_CANVAS_H);
+  const dragging = useRef(false);
+  const dragStartY = useRef(0);
+  const dragStartH = useRef(DEFAULT_CANVAS_H);
 
   useEffect(() => {
     const onMove = (e) => {
       if (!dragging.current) return;
       const delta = e.clientY - dragStartY.current;
-      const newH = Math.min(Math.max(dragStartH.current + delta, 160), window.innerHeight * 0.80);
-      setCanvasHeight(newH);
+      setCanvasHeight(Math.min(Math.max(dragStartH.current + delta, 160), window.innerHeight * 0.8));
     };
     const onUp = () => {
       if (!dragging.current) return;
@@ -75,103 +98,140 @@ export default function App() {
     document.body.style.userSelect = 'none';
   }, [canvasHeight]);
 
-  // ── Simulation replay ──────────────────────────────────────────────────────
+  // ── Replay of the Optimized System queue history ────────────────────────
   const replayRef = useRef(null);
-  const frameRef  = useRef(0);
+  const frameRef = useRef(0);
 
   const stopReplay = useCallback(() => {
     if (replayRef.current) clearInterval(replayRef.current);
     replayRef.current = null;
   }, []);
 
-  const startReplay = useCallback((ts) => {
+  const startReplay = useCallback((history) => {
     stopReplay();
     frameRef.current = 0;
-    if (!ts?.length) return;
-    const spd = params.speed || 4;
-    const interval = Math.max(16, Math.round(1000 / (60 * spd)));
+    if (!history?.length) return;
+    const interval = Math.max(16, Math.round(1000 / (30 * (live.speed || 4))));
     replayRef.current = setInterval(() => {
       const i = frameRef.current;
-      if (i >= ts.length) { stopReplay(); return; }
-      const f = ts[i];
+      if (i >= history.length) { stopReplay(); return; }
+      const f = history[i];
       setQueueLengths({ N: f.qN, S: f.qS, E: f.qE, W: f.qW });
       setActiveDir(f.activeDir);
-      setCycleNum(f.cycleNum);
-      const ls = { N:'red', S:'red', E:'red', W:'red' };
+      setCycleNum(f.cycle);
+      const ls = { N: 'red', S: 'red', E: 'red', W: 'red' };
       if (f.activeDir) ls[f.activeDir] = 'green';
       setLightStates(ls);
-      frameRef.current++;
+      frameRef.current += 1;
     }, interval);
-  }, [params.speed, stopReplay]);
+  }, [live.speed, stopReplay]);
 
   const handleRun = useCallback(() => {
-    if (running || mcRunning) return;
-    stopReplay(); setRunning(true); setMcResults(null);
+    if (running || busy) return;
+    stopReplay();
+    setRunning(true);
+    setLiveError(null);
     setTimeout(() => {
       try {
-        const eq  = simulateEqualTimeSystem(params, params.seed, true);
-        const opt = simulateOptimisedSystem(params, params.seed, true);
-        setEqualResult(eq); setOptResult(opt);
-        setEqualTimeSeries(eq.timeSeries); setOptTimeSeries(opt.timeSeries);
+        const lambdas = DIRS.map(d => live.lambdas[d]);
+        const { equal, optimized } = runPairedTrial({
+          lambdas, seed: live.seed, k: live.k, collectHistory: true,
+        });
+        setLiveResult({ equal, optimized, lambdas, seed: live.seed, k: live.k });
         setVisState({ running: true });
-        startReplay(opt.timeSeries);
-        setTab('Results');
-      } catch (e) { console.error(e); } finally { setRunning(false); }
+        startReplay(optimized.history);
+        setTab('Live Run');
+      } catch (e) {
+        setLiveError(e.message);
+      } finally {
+        setRunning(false);
+      }
     }, 10);
-  }, [params, running, mcRunning, startReplay, stopReplay]);
+  }, [live, running, busy, startReplay, stopReplay]);
 
   const handleReset = useCallback(() => {
     stopReplay();
-    setEqualResult(null); setOptResult(null);
-    setEqualTimeSeries(null); setOptTimeSeries(null);
-    setMcResults(null); setVisState(null); setActiveDir(null);
-    setLightStates({ N:'red', S:'red', E:'red', W:'red' });
-    setQueueLengths({ N:0, S:0, E:0, W:0 });
+    setLiveResult(null);
+    setVisState(null);
+    setActiveDir(null);
+    setLiveError(null);
+    setLightStates({ N: 'red', S: 'red', E: 'red', W: 'red' });
+    setQueueLengths({ N: 0, S: 0, E: 0, W: 0 });
     setCycleNum(0);
   }, [stopReplay]);
 
-  const handleRunMC = useCallback(() => {
-    if (running || mcRunning) return;
-    stopReplay(); setMcRunning(true);
-    setTimeout(() => {
-      try {
-        const mc = runMonteCarlo(params, params.mcTrials);
-        setMcResults(mc); setTab('Results');
-      } catch (e) { console.error(e); } finally { setMcRunning(false); }
-    }, 10);
-  }, [params, running, mcRunning, stopReplay]);
+  useEffect(() => () => stopReplay(), [stopReplay]);
 
-  // ── Cmd+R shortcut ─────────────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'r') {
-        e.preventDefault();
-        handleRun();
-      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'r') { e.preventDefault(); handleRun(); }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [handleRun]);
 
-  useEffect(() => () => stopReplay(), [stopReplay]);
+  // ── Analysis actions ────────────────────────────────────────────────────
+  const swallowCancel = (e) => { if (e?.message !== 'cancelled') console.error(e); };
 
-  const isActive = !!visState || !!mcResults;
-  const dirColors = { N:'#00e5ff', S:'#ff4081', E:'#76ff03', W:'#ffab40' };
+  const onCalibrate = useCallback(() => {
+    run('calibrate', {})
+      .then((res) => {
+        setCalibration(res);
+        // Adopt whichever k the calibration actually minimised.
+        setAnalysisConfig(c => ({ ...c, k: res.bestK }));
+        setLive(l => ({ ...l, k: res.bestK }));
+        setTab('Statistical Analysis');
+      })
+      .catch(swallowCancel);
+  }, [run]);
+
+  const onEvaluate = useCallback(() => {
+    run('evaluate', { trials: analysisConfig.trials, k: analysisConfig.k })
+      .then(res => { setScenarios(res); setTab('Statistical Analysis'); })
+      .catch(swallowCancel);
+  }, [run, analysisConfig.trials, analysisConfig.k]);
+
+  const onScenario = useCallback(() => {
+    const s = SCENARIOS[analysisConfig.scenarioIndex];
+    run('scenario', {
+      pattern: s.pattern, rho: s.rho, seedBase: analysisConfig.seedBase,
+      trials: analysisConfig.trials, k: analysisConfig.k,
+    })
+      .then(res => { setScenarios([{ ...res, id: `${s.id}-custom`, label: s.label }]); setTab('Statistical Analysis'); })
+      .catch(swallowCancel);
+  }, [run, analysisConfig]);
+
+  const onTimestep = useCallback(() => {
+    run('timestep', { k: analysisConfig.k })
+      .then(res => { setSensitivity(res); setTab('Statistical Analysis'); })
+      .catch(swallowCancel);
+  }, [run, analysisConfig.k]);
+
+  const onRepresentative = useCallback(() => {
+    run('representative', { k: analysisConfig.k, overrides: REPRESENTATIVE })
+      .then(res => { setRepresentative(res); setTab('Graphs'); })
+      .catch(swallowCancel);
+  }, [run, analysisConfig.k]);
+
+  const isActive = !!visState || !!scenarios || !!calibration;
+  const highLoadScenario = scenarios?.find(s => s.pattern === 'High' && s.rho === 0.9)
+    ?? (scenarios?.length === 1 ? scenarios[0] : null);
 
   return (
     <div className="app">
-      {/* ── Header ── */}
       <header className="app-header">
         <div className="header-status">
           <div className={`status-dot ${isActive ? 'active' : ''}`} />
           <span className="status-label">
-            {running ? 'Running simulation…' : mcRunning ? 'Monte Carlo running…' : isActive ? 'Simulation complete' : 'Ready  ·  ⌘R to run'}
+            {running ? 'Running simulation…'
+              : busy ? `Analysis running… ${progress ? `${progress.done}/${progress.total}` : ''}`
+                : isActive ? 'Ready' : 'Ready  ·  ⌘R to run'}
           </span>
           {activeDir && (
             <div className="dir-indicators">
-              {['N','S','E','W'].map(d => (
+              {DIRS.map(d => (
                 <div key={d} className={`dir-dot ${d === activeDir ? 'green' : ''}`}
-                  style={d === activeDir ? { background: dirColors[d], boxShadow: `0 0 4px ${dirColors[d]}` } : {}} />
+                  style={d === activeDir ? { background: DIR_COLORS[d], boxShadow: `0 0 4px ${DIR_COLORS[d]}` } : {}} />
               ))}
             </div>
           )}
@@ -179,39 +239,36 @@ export default function App() {
         <span className="byline">Made by Paul Nercessian</span>
       </header>
 
-      {/* ── Body ── */}
       <div className="app-body">
         <aside className="sidebar">
           <ControlPanel
-            params={params} setParams={setParams}
-            onRun={handleRun} onReset={handleReset} onRunMC={handleRunMC}
-            running={running} mcRunning={mcRunning}
+            live={live} setLive={setLive}
+            onRun={handleRun} onReset={handleReset}
+            running={running} busy={busy}
           />
         </aside>
 
         <main className="main-content">
-          {/* 3D Canvas — resizable */}
           <div className="canvas-wrapper" style={{ flex: `0 0 ${canvasHeight}px` }}>
             <div className="canvas-status-bar">
               <span className="canvas-status-text">
-                {visState ? 'Optimised system replay  ·  drag to orbit  ·  scroll to zoom' : 'Idle  ·  drag to orbit  ·  scroll to zoom'}
+                {visState
+                  ? 'Optimized System replay  ·  drag to orbit  ·  scroll to zoom'
+                  : 'Idle  ·  drag to orbit  ·  scroll to zoom'}
               </span>
               {cycleNum > 0 && <span className="canvas-cycle-badge">Cycle {cycleNum}</span>}
             </div>
             <IntersectionCanvas
-              simState={visState} activeDir={activeDir}
+              activeDir={activeDir}
               lightStates={lightStates} queueLengths={queueLengths}
-              greenCountdown={greenCountdown} cycleNum={cycleNum}
-              speed={params.speed}
+              greenCountdown={0} cycleNum={cycleNum} speed={live.speed}
             />
           </div>
 
-          {/* ── Resize handle ── */}
           <div className="resize-handle" onMouseDown={onResizeHandleDown}>
             <div className="resize-grip" />
           </div>
 
-          {/* Tab bar */}
           <div className="tabs">
             {TABS.map(t => (
               <button key={t} className={`tab-btn ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
@@ -220,11 +277,44 @@ export default function App() {
             ))}
           </div>
 
-          {/* Tab content */}
           <div className="tab-content">
-            {tab === 'Results'     && <ResultsDashboard equalResult={equalResult} optResult={optResult} mcResults={mcResults} />}
-            {tab === 'Graphs'      && <GraphPanel equalTimeSeries={equalTimeSeries} optTimeSeries={optTimeSeries} mcResults={mcResults} equalResult={equalResult} optResult={optResult} />}
-            {tab === 'Data Tables' && <DataTables params={params} equalResult={equalResult} optResult={optResult} mcResults={mcResults} equalTimeSeries={equalTimeSeries} optTimeSeries={optTimeSeries} />}
+            {tab === 'Live Run' && (
+              <>
+                {liveError && <div className="analysis-error">Simulation failed: {liveError}</div>}
+                <ResultsDashboard result={liveResult} />
+                <GraphPanel result={liveResult} />
+              </>
+            )}
+
+            {tab === 'Statistical Analysis' && (
+              <StatisticalAnalysisPanel
+                config={analysisConfig} setConfig={setAnalysisConfig}
+                calibration={calibration} scenarios={scenarios}
+                sensitivity={sensitivity} representative={representative}
+                busy={busy} progress={progress} error={workerError}
+                onCalibrate={onCalibrate} onEvaluate={onEvaluate} onScenario={onScenario}
+                onTimestep={onTimestep} onRepresentative={onRepresentative} onCancel={cancel}
+              />
+            )}
+
+            {tab === 'Graphs' && (
+              <div className="graph-panel">
+                <h3 className="section-title">Graphs</h3>
+                {!calibration && !scenarios && !representative && (
+                  <p className="tables-placeholder">
+                    Run the calibration, the nine-scenario evaluation and the representative run from
+                    the Statistical Analysis tab; the graphs are drawn from those computed results.
+                  </p>
+                )}
+                {calibration && <CalibrationChart calibration={calibration} />}
+                {scenarios?.length > 0 && <ImprovementChart scenarios={scenarios} />}
+                {scenarios?.length === 9 && <ReductionHeatmap scenarios={scenarios} />}
+                {representative && <RepresentativeQueueChart representative={representative} />}
+                {highLoadScenario && <DifferenceHistogram scenario={highLoadScenario} />}
+              </div>
+            )}
+
+            {tab === 'Method' && <MathAnalysisPanel />}
           </div>
         </main>
       </div>

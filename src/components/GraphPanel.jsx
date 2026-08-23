@@ -2,199 +2,103 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer, ReferenceLine,
 } from 'recharts';
+import { ChartCard } from './AnalysisGraphs.jsx';
+import { DIRS, MODEL } from '../model/constants.js';
 
 const DIR_COLOR = { N: '#00e5ff', S: '#ff4081', E: '#76ff03', W: '#ffab40' };
+const AXIS = { fill: '#9aa3bd', fontSize: 11 };
+const TOOLTIP = { background: '#161b2c', border: '1px solid #2c3350', color: '#e8ecf7', fontSize: 12 };
 
-export default function GraphPanel({ equalTimeSeries, optTimeSeries, mcResults, equalResult, optResult }) {
+/** Charts for the single live paired run. */
+export default function GraphPanel({ result }) {
+  if (!result) return null;
+  const { equal, optimized } = result;
+
   return (
     <div className="graph-panel">
-      <h3 className="section-title">Graphs & Analysis</h3>
+      <ChartCard
+        title="Queue length against time — Equal-Time System"
+        caption="Queue on each approach road, in vehicles, against simulated time in seconds."
+        filename="live_queues_equal.png"
+      >
+        <QueueChart data={equal.history} />
+      </ChartCard>
 
-      {(equalTimeSeries || optTimeSeries) && (
-        <GraphCard title="Queue Length vs Time — Equal-Time System">
-          <QueueChart data={equalTimeSeries} />
-        </GraphCard>
-      )}
+      <ChartCard
+        title="Queue length against time — Optimized System"
+        caption="Same arrivals, same time axis, under the adaptive queue-weighted policy."
+        filename="live_queues_optimized.png"
+      >
+        <QueueChart data={optimized.history} />
+      </ChartCard>
 
-      {optTimeSeries && (
-        <GraphCard title="Queue Length vs Time — Optimised System">
-          <QueueChart data={optTimeSeries} />
-        </GraphCard>
-      )}
+      <ChartCard
+        title="Mean waiting time by road"
+        caption="Mean waiting time per road, in seconds. Roads carry different volumes, so these four means are not simply averaged to get W."
+        filename="live_wait_by_road.png"
+      >
+        <RoadBarChart equal={equal.roadMeanWait} optimized={optimized.roadMeanWait} unit="Mean wait (s)" />
+      </ChartCard>
 
-      {equalResult && optResult && (
-        <>
-          <GraphCard title="Mean Waiting Time Comparison">
-            <WaitCompareChart equal={equalResult} opt={optResult} />
-          </GraphCard>
-
-          <GraphCard title="Green Time Allocation">
-            <GreenTimeChart equal={equalResult} opt={optResult} />
-          </GraphCard>
-
-          <GraphCard title="Per-Direction Metrics">
-            <DirMetricsChart equal={equalResult} opt={optResult} />
-          </GraphCard>
-        </>
-      )}
-
-      {mcResults && (
-        <>
-          <GraphCard title="Monte Carlo: Waiting Time Distribution">
-            <MCHistogram rawEqual={mcResults.rawEqual} rawOpt={mcResults.rawOpt} />
-          </GraphCard>
-
-          <GraphCard title="Monte Carlo: Trial-by-Trial Comparison">
-            <MCTrialChart mcResults={mcResults} />
-          </GraphCard>
-        </>
-      )}
-    </div>
-  );
-}
-
-function GraphCard({ title, children }) {
-  return (
-    <div className="graph-card">
-      <div className="graph-title">{title}</div>
-      {children}
+      <ChartCard
+        title="Green-time allocation in the final cycle"
+        caption={`Green seconds per road out of the ${MODEL.cycleLength - 4 * (MODEL.yellow + MODEL.allRed)} s budget G.`}
+        filename="live_green_allocation.png"
+      >
+        <RoadBarChart equal={equal.greenTimes} optimized={optimized.greenTimes} unit="Green time (s)" />
+      </ChartCard>
     </div>
   );
 }
 
 function QueueChart({ data }) {
-  if (!data || !data.length) return <NoData />;
-  const sampled = data.filter((_, i) => i % Math.max(1, Math.floor(data.length / 200)) === 0);
+  if (!data?.length) return <NoData />;
+  const stride = Math.max(1, Math.floor(data.length / 400));
+  const sampled = data.filter((_, i) => i % stride === 0);
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <LineChart data={sampled} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#2a2f45" />
-        <XAxis dataKey="t" tick={{ fill: '#888', fontSize: 11 }} label={{ value: 'Time (s)', position: 'insideBottom', fill: '#888', fontSize: 11 }} />
-        <YAxis tick={{ fill: '#888', fontSize: 11 }} label={{ value: 'Queue', angle: -90, position: 'insideLeft', fill: '#888', fontSize: 11 }} />
-        <Tooltip contentStyle={{ background: '#1a1f2e', border: '1px solid #333', color: '#fff' }} />
-        <Legend wrapperStyle={{ color: '#aaa', fontSize: 12 }} />
-        {['N','S','E','W'].map(d => (
-          <Line key={d} type="monotone" dataKey={`q${d}`} stroke={DIR_COLOR[d]} dot={false} strokeWidth={1.5} name={`Queue ${d}`} />
+    <ResponsiveContainer width="100%" height={240}>
+      <LineChart data={sampled} margin={{ top: 10, right: 24, bottom: 26, left: 8 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#252b42" />
+        <XAxis dataKey="t" type="number" domain={[0, 'dataMax']} tick={AXIS}
+          label={{ value: 'Time (seconds)', position: 'insideBottom', offset: -14, fill: AXIS.fill, fontSize: 12 }} />
+        <YAxis tick={AXIS}
+          label={{ value: 'Queue (vehicles)', angle: -90, position: 'insideLeft', offset: 4, fill: AXIS.fill, fontSize: 12 }} />
+        <Tooltip contentStyle={TOOLTIP} labelFormatter={v => `t = ${v} s`} />
+        <Legend wrapperStyle={{ color: '#aab', fontSize: 12 }} />
+        <ReferenceLine x={MODEL.arrivalHorizon} stroke="#ffab40" strokeDasharray="4 4"
+          label={{ value: 'arrivals stop', fill: '#ffab40', fontSize: 11, position: 'insideTopRight' }} />
+        {DIRS.map(d => (
+          <Line key={d} type="monotone" dataKey={`q${d}`} stroke={DIR_COLOR[d]} dot={false}
+            strokeWidth={1.4} name={`Queue ${d}`} />
         ))}
       </LineChart>
     </ResponsiveContainer>
   );
 }
 
-function WaitCompareChart({ equal, opt }) {
-  const data = ['N','S','E','W'].map(d => ({
-    dir: d,
-    'Equal-Time': +equal.dirMeanWait[d].toFixed(2),
-    'Optimised':  +opt.dirMeanWait[d].toFixed(2),
+function RoadBarChart({ equal, optimized, unit }) {
+  const data = DIRS.map((d, i) => ({
+    road: d,
+    'Equal-Time System': +equal[i].toFixed(2),
+    'Optimized System': +optimized[i].toFixed(2),
   }));
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <BarChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#2a2f45" />
-        <XAxis dataKey="dir" tick={{ fill: '#888', fontSize: 12 }} />
-        <YAxis tick={{ fill: '#888', fontSize: 11 }} label={{ value: 'Wait (s)', angle: -90, position: 'insideLeft', fill: '#888', fontSize: 11 }} />
-        <Tooltip contentStyle={{ background: '#1a1f2e', border: '1px solid #333', color: '#fff' }} />
-        <Legend wrapperStyle={{ color: '#aaa', fontSize: 12 }} />
-        <Bar dataKey="Equal-Time" fill="#6c7dc4" radius={[4,4,0,0]} />
-        <Bar dataKey="Optimised"  fill="#00e676" radius={[4,4,0,0]} />
+    <ResponsiveContainer width="100%" height={230}>
+      <BarChart data={data} margin={{ top: 10, right: 24, bottom: 26, left: 8 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#252b42" />
+        <XAxis dataKey="road" tick={{ ...AXIS, fontSize: 12 }}
+          label={{ value: 'Approach road', position: 'insideBottom', offset: -14, fill: AXIS.fill, fontSize: 12 }} />
+        <YAxis tick={AXIS}
+          label={{ value: unit, angle: -90, position: 'insideLeft', offset: 4, fill: AXIS.fill, fontSize: 12 }} />
+        <Tooltip contentStyle={TOOLTIP} />
+        <Legend wrapperStyle={{ color: '#aab', fontSize: 12 }} />
+        <Bar dataKey="Equal-Time System" fill="#6c7dc4" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="Optimized System" fill="#00e676" radius={[4, 4, 0, 0]} />
       </BarChart>
-    </ResponsiveContainer>
-  );
-}
-
-function GreenTimeChart({ equal, opt }) {
-  const eqG = equal.greenTimes || [25,25,25,25];
-  const opG = opt.greenTimes   || [25,25,25,25];
-  const data = ['N','S','E','W'].map((d, i) => ({
-    dir: d,
-    'Equal-Time': +eqG[i].toFixed(1),
-    'Optimised':  +opG[i].toFixed(1),
-  }));
-  return (
-    <ResponsiveContainer width="100%" height={220}>
-      <BarChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#2a2f45" />
-        <XAxis dataKey="dir" tick={{ fill: '#888', fontSize: 12 }} />
-        <YAxis tick={{ fill: '#888', fontSize: 11 }} label={{ value: 'Green (s)', angle: -90, position: 'insideLeft', fill: '#888', fontSize: 11 }} />
-        <Tooltip contentStyle={{ background: '#1a1f2e', border: '1px solid #333', color: '#fff' }} />
-        <Legend wrapperStyle={{ color: '#aaa', fontSize: 12 }} />
-        <Bar dataKey="Equal-Time" fill="#6c7dc4" radius={[4,4,0,0]} />
-        <Bar dataKey="Optimised"  fill="#00e676" radius={[4,4,0,0]} />
-      </BarChart>
-    </ResponsiveContainer>
-  );
-}
-
-function DirMetricsChart({ equal, opt }) {
-  const data = ['N','S','E','W'].map(d => ({
-    dir: d,
-    'Eq MaxQueue': equal.maxQueuePerDir[d] || 0,
-    'Opt MaxQueue': opt.maxQueuePerDir[d]  || 0,
-  }));
-  return (
-    <ResponsiveContainer width="100%" height={220}>
-      <BarChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#2a2f45" />
-        <XAxis dataKey="dir" tick={{ fill: '#888', fontSize: 12 }} />
-        <YAxis tick={{ fill: '#888', fontSize: 11 }} label={{ value: 'Max Queue', angle: -90, position: 'insideLeft', fill: '#888', fontSize: 11 }} />
-        <Tooltip contentStyle={{ background: '#1a1f2e', border: '1px solid #333', color: '#fff' }} />
-        <Legend wrapperStyle={{ color: '#aaa', fontSize: 12 }} />
-        <Bar dataKey="Eq MaxQueue"  fill="#6c7dc4" radius={[4,4,0,0]} />
-        <Bar dataKey="Opt MaxQueue" fill="#00e676" radius={[4,4,0,0]} />
-      </BarChart>
-    </ResponsiveContainer>
-  );
-}
-
-function MCHistogram({ rawEqual, rawOpt }) {
-  if (!rawEqual || !rawOpt) return <NoData />;
-  const all = [...rawEqual, ...rawOpt];
-  const lo = Math.floor(Math.min(...all));
-  const hi = Math.ceil(Math.max(...all));
-  const bins = 15;
-  const step = (hi - lo) / bins || 1;
-  const buckets = Array.from({ length: bins }, (_, i) => ({
-    label: `${(lo + i * step).toFixed(0)}`,
-    Equal: 0, Optimised: 0,
-  }));
-  rawEqual.forEach(v => { const idx = Math.min(Math.floor((v - lo) / step), bins - 1); buckets[idx].Equal++; });
-  rawOpt.forEach(v   => { const idx = Math.min(Math.floor((v - lo) / step), bins - 1); buckets[idx].Optimised++; });
-  return (
-    <ResponsiveContainer width="100%" height={220}>
-      <BarChart data={buckets} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#2a2f45" />
-        <XAxis dataKey="label" tick={{ fill: '#888', fontSize: 10 }} label={{ value: 'Mean Wait (s)', position: 'insideBottom', fill: '#888', fontSize: 11 }} />
-        <YAxis tick={{ fill: '#888', fontSize: 11 }} label={{ value: 'Count', angle: -90, position: 'insideLeft', fill: '#888', fontSize: 11 }} />
-        <Tooltip contentStyle={{ background: '#1a1f2e', border: '1px solid #333', color: '#fff' }} />
-        <Legend wrapperStyle={{ color: '#aaa', fontSize: 12 }} />
-        <Bar dataKey="Equal"     fill="#6c7dc4" radius={[3,3,0,0]} />
-        <Bar dataKey="Optimised" fill="#00e676" radius={[3,3,0,0]} />
-      </BarChart>
-    </ResponsiveContainer>
-  );
-}
-
-function MCTrialChart({ mcResults }) {
-  const data = mcResults.equal.trialData.map((eq, i) => ({
-    trial: eq.trial,
-    'Equal-Time': eq.meanWait,
-    'Optimised': mcResults.optimised.trialData[i].meanWait,
-  }));
-  return (
-    <ResponsiveContainer width="100%" height={220}>
-      <LineChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#2a2f45" />
-        <XAxis dataKey="trial" tick={{ fill: '#888', fontSize: 11 }} label={{ value: 'Trial #', position: 'insideBottom', fill: '#888', fontSize: 11 }} />
-        <YAxis tick={{ fill: '#888', fontSize: 11 }} label={{ value: 'Mean Wait (s)', angle: -90, position: 'insideLeft', fill: '#888', fontSize: 11 }} />
-        <Tooltip contentStyle={{ background: '#1a1f2e', border: '1px solid #333', color: '#fff' }} />
-        <Legend wrapperStyle={{ color: '#aaa', fontSize: 12 }} />
-        <Line type="monotone" dataKey="Equal-Time" stroke="#6c7dc4" dot={false} strokeWidth={2} />
-        <Line type="monotone" dataKey="Optimised"  stroke="#00e676" dot={false} strokeWidth={2} />
-      </LineChart>
     </ResponsiveContainer>
   );
 }
 
 function NoData() {
-  return <div style={{ color: '#555', textAlign: 'center', padding: 40 }}>Run simulation first</div>;
+  return <div className="tables-placeholder">Run the simulation first.</div>;
 }

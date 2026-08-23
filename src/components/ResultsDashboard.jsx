@@ -1,66 +1,94 @@
-import { calculatePercentageImprovement } from '../utils/statistics.js';
+import { DIRS, greenBudget } from '../model/constants.js';
+import { downloadCSV, queueHistoryCSV } from '../utils/csvExport.js';
 
-export default function ResultsDashboard({ equalResult, optResult, mcResults }) {
-  if (!equalResult && !optResult && !mcResults) return null;
+const fmt = (v, d = 2) => (Number.isFinite(v) ? v.toFixed(d) : '—');
+
+/** Single paired run: both systems on one identical set of arrivals. */
+export default function ResultsDashboard({ result }) {
+  if (!result) {
+    return <div className="tables-placeholder">Press Run Simulation to simulate one seed.</div>;
+  }
+  const { equal, optimized, lambdas, seed, k } = result;
+  const reduction = equal.meanWait === 0
+    ? 0
+    : (100 * (equal.meanWait - optimized.meanWait)) / equal.meanWait;
 
   return (
     <div className="results-dashboard">
-      {equalResult && optResult && <SingleRunSummary equal={equalResult} opt={optResult} />}
-      {mcResults && <MCResultsSummary mc={mcResults} />}
-    </div>
-  );
-}
-
-function SingleRunSummary({ equal, opt }) {
-  const impWait = calculatePercentageImprovement(equal.meanWaitTime, opt.meanWaitTime);
-  const impMaxQ = calculatePercentageImprovement(equal.maxQueueLength, opt.maxQueueLength);
-
-  return (
-    <div className="result-card">
-      <div className="result-card-title">Single Run Results</div>
-      <div className="metrics-grid">
-        <MetricPair label="Mean Waiting Time"
-          eq={`${equal.meanWaitTime.toFixed(2)} s`}
-          opt={`${opt.meanWaitTime.toFixed(2)} s`}
-          imp={impWait} />
-        <MetricPair label="Max Queue Length"
-          eq={`${equal.maxQueueLength} cars`}
-          opt={`${opt.maxQueueLength} cars`}
-          imp={impMaxQ} />
-        <MetricPair label="Total Served"
-          eq={equal.totalServed}
-          opt={opt.totalServed}
-          imp={calculatePercentageImprovement(equal.totalServed, opt.totalServed) * -1} />
-        <MetricPair label="Throughput (c/s)"
-          eq={equal.throughput.toFixed(4)}
-          opt={opt.throughput.toFixed(4)}
-          imp={calculatePercentageImprovement(equal.throughput, opt.throughput) * -1} />
-        <MetricPair label="Cars Left in Queue"
-          eq={equal.carsLeft}
-          opt={opt.carsLeft}
-          imp={calculatePercentageImprovement(equal.carsLeft, opt.carsLeft)} />
-        <MetricPair label="Fairness SD (s)"
-          eq={equal.fairnessSD.toFixed(3)}
-          opt={opt.fairnessSD.toFixed(3)}
-          imp={calculatePercentageImprovement(equal.fairnessSD, opt.fairnessSD)} />
+      <div className="result-card">
+        <div className="result-card-title">
+          Single paired run — seed {seed}, k = {k} s, identical arrivals for both systems
+        </div>
+        <div className="metrics-grid">
+          <MetricPair label="Vehicle-weighted mean waiting time W"
+            eq={`${fmt(equal.meanWait)} s`} opt={`${fmt(optimized.meanWait)} s`} imp={reduction} />
+          <MetricPair label="Maximum queue"
+            eq={`${equal.maxQueue} veh`} opt={`${optimized.maxQueue} veh`}
+            imp={equal.maxQueue ? (100 * (equal.maxQueue - optimized.maxQueue)) / equal.maxQueue : 0} />
+          <MetricPair label="Fairness F (population SD)"
+            eq={`${fmt(equal.fairness)} s`} opt={`${fmt(optimized.fairness)} s`}
+            imp={equal.fairness ? (100 * (equal.fairness - optimized.fairness)) / equal.fairness : 0} />
+          <MetricPair label="Queue-clearance time"
+            eq={`${fmt(equal.clearanceTime, 1)} s`} opt={`${fmt(optimized.clearanceTime, 1)} s`}
+            imp={equal.clearanceTime ? (100 * (equal.clearanceTime - optimized.clearanceTime)) / equal.clearanceTime : 0} />
+          <MetricPair label="Total arrivals" eq={equal.totalArrivals} opt={optimized.totalArrivals} />
+          <MetricPair label="Total served" eq={equal.totalServed} opt={optimized.totalServed} />
+        </div>
+        <p className="note small">
+          Both systems served every vehicle that arrived ({equal.totalServed} = {equal.totalArrivals}),
+          so the waiting-time comparison covers the whole demand rather than a truncated run.
+        </p>
       </div>
-    </div>
-  );
-}
 
-function MCResultsSummary({ mc }) {
-  const { equal: eq, optimised: opt, improvement: imp } = mc;
-  return (
-    <div className="result-card">
-      <div className="result-card-title">Monte Carlo Summary ({mc.trials} trials)</div>
-      <div className="mc-compare-grid">
-        <MCSystemCard label="Equal-Time System" ci={eq.waitCI} maxQCI={eq.maxQueueCI} thruCI={eq.throughputCI} color="#6c7dc4" />
-        <div className="mc-arrow">→</div>
-        <MCSystemCard label="Optimised System"  ci={opt.waitCI} maxQCI={opt.maxQueueCI} thruCI={opt.throughputCI} color="#00e676" />
-      </div>
-      <div className="imp-row">
-        <ImpStat label="Wait Time Improvement" value={imp.meanWait} />
-        <ImpStat label="Max Queue Improvement" value={imp.maxQueue} />
+      <div className="table-section">
+        <div className="table-header">
+          <span className="table-title">Per-road results and final green split</span>
+          <button className="btn btn-export-sm"
+            onClick={() => downloadCSV(`queue_history_seed${seed}.csv`, queueHistoryCSV({
+              pattern: 'custom', rho: '', seed, k, equal, optimized,
+            }))}>
+            Queue history CSV
+          </button>
+        </div>
+        <div className="table-scroll">
+          <table className="ia-table">
+            <thead>
+              <tr>
+                <th>Road</th><th>λ (veh/s)</th><th>Arrivals</th>
+                <th>Equal W<sub>i</sub> (s)</th><th>Optimized W<sub>i</sub> (s)</th>
+                <th>Equal max queue</th><th>Optimized max queue</th>
+                <th>Equal green (s)</th><th>Optimized final green (s)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {DIRS.map((d, i) => (
+                <tr key={d}>
+                  <td>{d}</td>
+                  <td>{lambdas[i].toFixed(5)}</td>
+                  <td>{equal.arrivalsPerRoad[i]}</td>
+                  <td>{fmt(equal.roadMeanWait[i], 1)}</td>
+                  <td>{fmt(optimized.roadMeanWait[i], 1)}</td>
+                  <td>{equal.maxQueuePerRoad[i]}</td>
+                  <td>{optimized.maxQueuePerRoad[i]}</td>
+                  <td>{fmt(equal.greenTimes[i], 1)}</td>
+                  <td>{fmt(optimized.greenTimes[i], 1)}</td>
+                </tr>
+              ))}
+              <tr className="row-total">
+                <td>Σ</td>
+                <td>{lambdas.reduce((a, b) => a + b, 0).toFixed(5)}</td>
+                <td>{equal.totalArrivals}</td>
+                <td colSpan={4}>W is the vehicle-weighted mean, not the mean of these four columns</td>
+                <td>{fmt(equal.greenTimes.reduce((a, b) => a + b, 0), 1)}</td>
+                <td>{fmt(optimized.greenTimes.reduce((a, b) => a + b, 0), 1)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="note small">
+          Both green splits sum to the budget G = {greenBudget()} s, and every optimized green stays
+          inside the allowed range.
+        </p>
       </div>
     </div>
   );
@@ -71,37 +99,14 @@ function MetricPair({ label, eq, opt, imp }) {
     <div className="metric-pair">
       <div className="mp-label">{label}</div>
       <div className="mp-values">
-        <div className="mp-eq"><span className="sys-badge eq">Eq</span> {eq}</div>
-        <div className="mp-opt"><span className="sys-badge opt">Opt</span> {opt}</div>
-        {imp !== undefined && (
+        <div className="mp-eq"><span className="sys-badge eq">Equal</span> {eq}</div>
+        <div className="mp-opt"><span className="sys-badge opt">Optimized</span> {opt}</div>
+        {imp !== undefined && Number.isFinite(imp) && (
           <div className={`mp-imp ${imp > 0 ? 'good' : imp < 0 ? 'bad' : ''}`}>
-            {imp > 0 ? '▼ ' : '▲ '}{Math.abs(imp).toFixed(2)}%
+            {imp > 0 ? '▼ ' : imp < 0 ? '▲ ' : ''}{Math.abs(imp).toFixed(2)}%
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function MCSystemCard({ label, ci, maxQCI, thruCI, color }) {
-  return (
-    <div className="mc-sys-card" style={{ borderColor: color + '66' }}>
-      <div className="mc-sys-label" style={{ color }}>{label}</div>
-      <div className="mc-sys-stat"><span>Mean Wait</span><strong>{ci.mean.toFixed(2)} s</strong></div>
-      <div className="mc-sys-stat"><span>SD</span><strong>{ci.sd.toFixed(2)} s</strong></div>
-      <div className="mc-sys-stat"><span>95% CI</span><strong>[{ci.lower.toFixed(2)}, {ci.upper.toFixed(2)}]</strong></div>
-      <div className="mc-sys-stat"><span>Mean Max Queue</span><strong>{maxQCI.mean.toFixed(1)}</strong></div>
-      <div className="mc-sys-stat"><span>Mean Throughput</span><strong>{thruCI.mean.toFixed(4)} c/s</strong></div>
-    </div>
-  );
-}
-
-function ImpStat({ label, value }) {
-  const good = value > 0;
-  return (
-    <div className={`imp-stat ${good ? 'good' : 'bad'}`}>
-      <span>{label}</span>
-      <strong>{good ? '▼ ' : '▲ '}{Math.abs(value).toFixed(2)}%</strong>
     </div>
   );
 }
