@@ -1,7 +1,9 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
 import { PNG } from 'pngjs';
-import { GIFEncoder, applyPalette, quantize } from 'gifenc';
+import gifenc from 'gifenc';
+
+const { GIFEncoder, applyPalette, quantize } = gifenc;
 
 const BASE_URL = process.env.CAPTURE_URL
   ?? 'http://127.0.0.1:5173/Four-Way-Stohastic-Traffic-Simulation/';
