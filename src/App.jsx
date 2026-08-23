@@ -249,7 +249,8 @@ export default function App() {
         </aside>
 
         <main className="main-content">
-          <div className="canvas-wrapper" style={{ flex: `0 0 ${canvasHeight}px` }}>
+          <div className="canvas-wrapper" role="region" aria-label="3D optimized traffic replay"
+            style={{ flex: `0 0 ${canvasHeight}px` }}>
             <div className="canvas-status-bar">
               <span className="canvas-status-text">
                 {visState
