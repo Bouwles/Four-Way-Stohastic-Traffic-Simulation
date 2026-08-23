@@ -52,6 +52,7 @@ export default function ResultsDashboard({ result }) {
         </div>
         <div className="table-scroll">
           <table className="ia-table">
+            <caption className="sr-only">Per-road arrivals, waits, maximum queues and green times for one paired run</caption>
             <thead>
               <tr>
                 <th>Road</th><th>λ (veh/s)</th><th>Arrivals</th>
