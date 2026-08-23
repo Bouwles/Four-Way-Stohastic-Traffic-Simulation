@@ -20,6 +20,7 @@ export function ChartCard({ title, caption, children, filename }) {
         <div className="graph-title">{title}</div>
         {filename && (
           <button
+            type="button"
             className="btn btn-export-sm"
             onClick={() => downloadChartPng(ref.current, filename).catch(e => alert(e.message))}
           >
