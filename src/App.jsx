@@ -297,7 +297,7 @@ export default function App() {
           <div className="tab-content">
             {tab === 'Live Run' && (
               <>
-                {liveError && <div className="analysis-error">Simulation failed: {liveError}</div>}
+                {liveError && <div className="analysis-error" role="alert">Simulation failed: {liveError}</div>}
                 <ResultsDashboard result={liveResult} />
                 <GraphPanel result={liveResult} />
               </>
