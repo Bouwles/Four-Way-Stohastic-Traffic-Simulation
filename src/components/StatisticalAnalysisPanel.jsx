@@ -67,7 +67,7 @@ export default function StatisticalAnalysisPanel({
         <div className="progress-wrap" role="status" aria-live="polite">
           <div className="progress-bar">
             <div className="progress-fill"
-              style={{ width: `${Math.min(100, (100 * progress.done) / Math.max(1, progress.total)).toFixed(1)}%` }} />
+              style={{ transform: `scaleX(${Math.min(1, progress.done / Math.max(1, progress.total)).toFixed(3)})` }} />
           </div>
           <div className="progress-text">
             {progress.label ?? 'Working'} — {progress.done} / {progress.total} trials

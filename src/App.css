@@ -604,7 +604,12 @@ select:focus-visible,
 .progress-bar {
   height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden;
 }
-.progress-fill { height: 100%; background: var(--accent); transition: width 0.12s linear; }
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left center;
+  transition: transform 0.12s linear;
+}
 .progress-text { font-size: 11px; color: var(--text-3); }
 
 .table-scroll { overflow-x: auto; }
