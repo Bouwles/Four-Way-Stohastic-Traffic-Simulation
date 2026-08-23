@@ -43,7 +43,7 @@ export default function ControlPanel({ live, setLive, onRun, onReset, running, b
       <div className="cp-section">
         <div className="cp-section-label">Arrival rates λ (veh/s)</div>
         {DIRS.map(d => (
-          <Slider key={d} label={DIR_LABEL[d]} labelColor={DIR_COLOR[d]}
+          <Slider key={d} id={`lambda-${d}`} label={DIR_LABEL[d]} labelColor={DIR_COLOR[d]}
             min={0.005} max={0.25} step={0.00125}
             value={live.lambdas[d]} decimals={5}
             onChange={v => updLambda(d, v)} />
@@ -61,7 +61,7 @@ export default function ControlPanel({ live, setLive, onRun, onReset, running, b
             {K_GRID.map(k => <option key={k} value={k}>{k}</option>)}
           </select>
         </Row>
-        <Slider label="Replay speed" unit="×" min={1} max={30} step={1}
+        <Slider id="replay-speed" label="Replay speed" unit="×" min={1} max={30} step={1}
           value={live.speed} decimals={0} onChange={v => upd('speed', v)} />
       </div>
 
@@ -125,13 +125,13 @@ export default function ControlPanel({ live, setLive, onRun, onReset, running, b
   );
 }
 
-function Slider({ label, min, max, step, value, onChange, unit, labelColor, decimals = 3 }) {
+function Slider({ id, label, min, max, step, value, onChange, unit, labelColor, decimals = 3 }) {
   const pct = `${(((value - min) / (max - min)) * 100).toFixed(1)}%`;
   return (
     <div className="cp-row">
-      <label style={labelColor ? { color: labelColor } : {}}>{label}</label>
+      <label htmlFor={id} style={labelColor ? { color: labelColor } : {}}>{label}</label>
       <div className="slider-group">
-        <input type="range" min={min} max={max} step={step} value={value} className="cp-slider"
+        <input id={id} type="range" min={min} max={max} step={step} value={value} className="cp-slider"
           style={{ background: `linear-gradient(to right, #0a84ff ${pct}, rgba(255,255,255,0.14) ${pct})` }}
           onChange={e => onChange(parseFloat(e.target.value))} />
         <span className="slider-val">{value.toFixed(decimals)}{unit || ''}</span>
