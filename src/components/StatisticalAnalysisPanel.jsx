@@ -75,7 +75,7 @@ export default function StatisticalAnalysisPanel({
         </div>
       )}
 
-      {error && <div className="analysis-error">Analysis failed: {error}</div>}
+      {error && <div className="analysis-error" role="alert">Analysis failed: {error}</div>}
 
       {/* ── Calibration ── */}
       {calibration && (
