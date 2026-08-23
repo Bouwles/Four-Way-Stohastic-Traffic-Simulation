@@ -318,7 +318,7 @@ export default function App() {
               <div className="graph-panel">
                 <h3 className="section-title">Graphs</h3>
                 {!calibration && !scenarios && !representative && (
-                  <p className="tables-placeholder">
+                  <p className="tables-placeholder" role="status">
                     Run the calibration, the nine-scenario evaluation and the representative run from
                     the Statistical Analysis tab; the graphs are drawn from those computed results.
                   </p>
