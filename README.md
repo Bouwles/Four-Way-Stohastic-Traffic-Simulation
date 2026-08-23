@@ -17,6 +17,7 @@ hard-coded, including the selected value of *k*.
 ## Contents
 
 - [The two systems](#the-two-systems)
+- [Simulation photos and GIF](#simulation-photos-and-gif)
 - [Fixed model parameters](#fixed-model-parameters)
 - [Poisson arrivals](#poisson-arrivals)
 - [Seeded random numbers](#seeded-random-numbers)
@@ -49,6 +50,14 @@ hard-coded, including the selected value of *k*.
 
 Both systems use the same cycle structure, the same service rate and the same green budget. The only
 difference is how that budget is divided between the four approaches.
+
+## Simulation photos and GIF
+
+![Desktop view of the live four-way traffic simulation](docs/media/simulation-live-desktop.png)
+
+![Animated GIF showing the optimized-system replay on the 3D intersection](docs/media/simulation-replay.gif)
+
+![Mobile view of the traffic simulation controls and canvas](docs/media/simulation-live-mobile.png)
 
 ## Fixed model parameters
 
