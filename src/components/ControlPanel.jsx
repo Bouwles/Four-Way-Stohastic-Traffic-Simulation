@@ -52,12 +52,12 @@ export default function ControlPanel({ live, setLive, onRun, onReset, running, b
 
       <div className="cp-section">
         <div className="cp-section-label">Run settings</div>
-        <Row label="Random seed">
-          <input type="number" className="cp-input" value={live.seed}
+        <Row id="random-seed" label="Random seed">
+          <input id="random-seed" type="number" className="cp-input" value={live.seed}
             onChange={e => upd('seed', Number(e.target.value))} />
         </Row>
-        <Row label="Smoothing horizon k (s)">
-          <select className="cp-select" value={live.k} onChange={e => upd('k', Number(e.target.value))}>
+        <Row id="smoothing-k" label="Smoothing horizon k (s)">
+          <select id="smoothing-k" className="cp-select" value={live.k} onChange={e => upd('k', Number(e.target.value))}>
             {K_GRID.map(k => <option key={k} value={k}>{k}</option>)}
           </select>
         </Row>
@@ -140,10 +140,10 @@ function Slider({ id, label, min, max, step, value, onChange, unit, labelColor, 
   );
 }
 
-function Row({ label, children }) {
+function Row({ id, label, children }) {
   return (
     <div className="cp-row">
-      <label>{label}</label>
+      <label htmlFor={id}>{label}</label>
       {children}
     </div>
   );
