@@ -43,7 +43,7 @@ export default function ResultsDashboard({ result }) {
       <div className="table-section">
         <div className="table-header">
           <span className="table-title">Per-road results and final green split</span>
-          <button className="btn btn-export-sm"
+          <button type="button" className="btn btn-export-sm"
             onClick={() => downloadCSV(`queue_history_seed${seed}.csv`, queueHistoryCSV({
               pattern: 'custom', rho: '', seed, k, equal, optimized,
             }))}>
