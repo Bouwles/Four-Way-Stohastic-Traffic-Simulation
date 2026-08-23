@@ -55,12 +55,12 @@ export default function StatisticalAnalysisPanel({
       </div>
 
       <div className="analysis-buttons">
-        <button className="btn btn-run" onClick={onCalibrate} disabled={busy}>Calibrate k</button>
-        <button className="btn btn-run" onClick={onEvaluate} disabled={busy}>Run all 9 scenarios</button>
-        <button className="btn btn-mc" onClick={onScenario} disabled={busy}>Run selected scenario</button>
-        <button className="btn btn-mc" onClick={onTimestep} disabled={busy}>Time-step sensitivity</button>
-        <button className="btn btn-mc" onClick={onRepresentative} disabled={busy}>Representative run</button>
-        {busy && <button className="btn btn-reset" onClick={onCancel}>Cancel</button>}
+        <button type="button" className="btn btn-run" onClick={onCalibrate} disabled={busy}>Calibrate k</button>
+        <button type="button" className="btn btn-run" onClick={onEvaluate} disabled={busy}>Run all 9 scenarios</button>
+        <button type="button" className="btn btn-mc" onClick={onScenario} disabled={busy}>Run selected scenario</button>
+        <button type="button" className="btn btn-mc" onClick={onTimestep} disabled={busy}>Time-step sensitivity</button>
+        <button type="button" className="btn btn-mc" onClick={onRepresentative} disabled={busy}>Representative run</button>
+        {busy && <button type="button" className="btn btn-reset" onClick={onCancel}>Cancel</button>}
       </div>
 
       {busy && progress && (
@@ -121,11 +121,11 @@ export default function StatisticalAnalysisPanel({
       {scenarios?.length > 0 && (
         <Section title={`Paired evaluation — ${scenarios.length} scenario${scenarios.length > 1 ? 's' : ''}, ${scenarios[0].trials} trials each, k = ${scenarios[0].k} s`}>
           <div className="export-row">
-            <button className="btn btn-export-sm"
+            <button type="button" className="btn btn-export-sm"
               onClick={() => downloadCSV('scenario_summaries.csv', scenarioSummaryCSV(scenarios))}>
               Scenario summaries CSV
             </button>
-            <button className="btn btn-export-sm"
+            <button type="button" className="btn btn-export-sm"
               onClick={() => downloadCSV('raw_paired_trials.csv', rawTrialsCSV(scenarios))}>
               Raw paired trials CSV
             </button>
@@ -320,7 +320,7 @@ function Section({ title, children, onExport }) {
     <div className="table-section">
       <div className="table-header">
         <span className="table-title">{title}</span>
-        {onExport && <button className="btn btn-export-sm" onClick={onExport}>Export CSV</button>}
+        {onExport && <button type="button" className="btn btn-export-sm" onClick={onExport}>Export CSV</button>}
       </div>
       {children}
     </div>
