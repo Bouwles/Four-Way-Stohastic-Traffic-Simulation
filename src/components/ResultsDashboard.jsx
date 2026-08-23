@@ -6,7 +6,7 @@ const fmt = (v, d = 2) => (Number.isFinite(v) ? v.toFixed(d) : '—');
 /** Single paired run: both systems on one identical set of arrivals. */
 export default function ResultsDashboard({ result }) {
   if (!result) {
-    return <div className="tables-placeholder">Press Run Simulation to simulate one seed.</div>;
+    return <div className="tables-placeholder" role="status">Press Run Simulation to simulate one seed.</div>;
   }
   const { equal, optimized, lambdas, seed, k } = result;
   const reduction = equal.meanWait === 0
