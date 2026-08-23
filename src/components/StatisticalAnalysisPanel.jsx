@@ -228,6 +228,7 @@ export default function StatisticalAnalysisPanel({
           onExport={() => downloadCSV('representative_queue_history.csv', queueHistoryCSV(representative))}>
           <div className="table-scroll">
             <table className="ia-table">
+              <caption className="sr-only">Representative paired run metrics and final green split</caption>
               <thead>
                 <tr>
                   <th>System</th><th>W (s)</th><th>Q<sub>max</sub></th><th>F (s)</th>
