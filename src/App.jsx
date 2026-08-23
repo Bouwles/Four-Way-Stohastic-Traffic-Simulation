@@ -280,6 +280,7 @@ export default function App() {
 
           <div className="resize-handle" role="separator" tabIndex={0}
             aria-label="Resize 3D replay panel" aria-orientation="horizontal"
+            title="Drag or use Arrow Up/Down to resize the 3D replay panel"
             onMouseDown={onResizeHandleDown} onKeyDown={onResizeHandleKeyDown}>
             <div className="resize-grip" />
           </div>
