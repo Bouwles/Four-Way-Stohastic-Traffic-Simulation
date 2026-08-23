@@ -192,6 +192,7 @@ export default function StatisticalAnalysisPanel({
           onExport={() => downloadCSV('timestep_sensitivity.csv', timeStepCSV(sensitivity))}>
           <div className="table-scroll">
             <table className="ia-table">
+              <caption className="sr-only">Time-step sensitivity results for equal-time and optimized systems</caption>
               <thead>
                 <tr>
                   <th>Δt (s)</th><th>Equal W (s)</th><th>Optimized W (s)</th>
