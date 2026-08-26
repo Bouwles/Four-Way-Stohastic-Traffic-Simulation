@@ -377,8 +377,8 @@ downloaded file is self-describing.
 ## Running it locally
 
 ```bash
-git clone https://github.com/Bouwles/Four-Way-Stohastic-Traffic-Simulation.git
-cd Four-Way-Stohastic-Traffic-Simulation
+git clone https://github.com/Bouwles/Four-Way-Stochastic-Traffic-Simulation.git
+cd Four-Way-Stochastic-Traffic-Simulation
 npm ci
 npm run dev        # dev server on http://localhost:5173
 ```
@@ -433,7 +433,7 @@ visible rather than hidden.
 Pushing to `main` triggers `.github/workflows/deploy.yml`, which runs `npm ci`, `npm run build` and
 publishes `dist/` to the `gh-pages` branch. Two details matter for Pages:
 
-- `vite.config.js` sets `base: '/Four-Way-Stohastic-Traffic-Simulation/'` so the built asset URLs
+- `vite.config.js` sets `base: '/Four-Way-Stochastic-Traffic-Simulation/'` so the built asset URLs
   resolve under the repository sub-path;
 - `public/.nojekyll` stops GitHub from running Jekyll, which would otherwise strip Vite's
   underscore-prefixed asset files.
@@ -508,4 +508,4 @@ Internal Assessment.
 If you refer to this work:
 
 > Nercessian, P. *Four-Way Stochastic Traffic Simulation.*
-> https://github.com/Bouwles/Four-Way-Stohastic-Traffic-Simulation
+> https://github.com/Bouwles/Four-Way-Stochastic-Traffic-Simulation

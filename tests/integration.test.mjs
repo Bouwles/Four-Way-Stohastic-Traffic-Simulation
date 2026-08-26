@@ -137,7 +137,8 @@ test('the representative run pairs both systems on one seed and keeps its histor
 
 test('the project is configured for GitHub Pages', () => {
   const viteConfig = readFileSync(join(ROOT, 'vite.config.js'), 'utf8');
-  assert.match(viteConfig, /base:\s*'\/Four-Way-Stohastic-Traffic-Simulation\/'/);
+  assert.match(viteConfig, /base:\s*'\/Four-Way-Stochastic-Traffic-Simulation\/'/);
+  assert.doesNotMatch(viteConfig, /Stohastic/);
   assert.ok(existsSync(join(ROOT, 'public/.nojekyll')), 'public/.nojekyll is required for Pages');
   const workflow = readFileSync(join(ROOT, '.github/workflows/deploy.yml'), 'utf8');
   assert.match(workflow, /npm run build/);

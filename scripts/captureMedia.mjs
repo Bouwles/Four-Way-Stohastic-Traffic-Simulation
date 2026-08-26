@@ -6,7 +6,7 @@ import gifenc from 'gifenc';
 const { GIFEncoder, applyPalette, quantize } = gifenc;
 
 const BASE_URL = process.env.CAPTURE_URL
-  ?? 'http://127.0.0.1:5173/Four-Way-Stohastic-Traffic-Simulation/';
+  ?? 'http://127.0.0.1:5173/Four-Way-Stochastic-Traffic-Simulation/';
 const OUT_DIR = 'docs/media';
 
 async function screenshot(page, name, viewport) {
