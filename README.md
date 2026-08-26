@@ -1,4 +1,4 @@
-**Live site:** https://bouwles.github.io/Four-Way-Stohastic-Traffic-Simulation/
+**Live site:** https://bouwles.github.io/Four-Way-Stochastic-Traffic-Simulation/
 
 # Four-Way Stochastic Traffic Simulation
 
